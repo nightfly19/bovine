@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use crate::{SendError,RecvError, Sender, Receiver};
 
 pub struct StdIOChannel<T> {
@@ -37,10 +39,13 @@ impl<T> Sender<T> for StdIOChannel<T> {
     fn send(&mut self, t: T) -> Result<(), SendError<T>>
         where T: serde::Serialize
     {
-        let stdout = self.stdout.lock();
+        let mut stdout = self.stdout.lock();
         match bincode::serialize_into(stdout, &t) {
-            Ok(_) =>
-                Ok(()),
+            Ok(_) => {
+                stdout = self.stdout.lock();
+                stdout.flush();
+                Ok(())
+            },
             Err(_) => {
                 Err(SendError(t))
             }
